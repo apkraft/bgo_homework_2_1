@@ -34,23 +34,28 @@ func (s *Service) Card2Card(fromCard, toCard string, amount int64) (totalWithdra
 	fee := s.calculateFee(transferFromCard, transferToCard)
 	totalWithdrawal = s.totalWithdrawal(amount, fee)
 
-	if transferFromCard != nil {
-		if transferFromCard.Balance >= totalWithdrawal {
-			transferFromCard.Balance -= totalWithdrawal
-			if transferToCard != nil {
-				transferToCard.Balance += amount
-			}
-			ok = true
-		} else {
-			ok = false
-		}
+	if transferFromCard == nil && transferToCard == nil {
+		return totalWithdrawal, true
 	}
 
-	if transferToCard != nil && ok {
+	if transferFromCard == nil && transferToCard != nil {
 		transferToCard.Balance += amount
+		return totalWithdrawal, true
 	}
 
-	return
+	if transferFromCard != nil && transferToCard == nil && transferFromCard.Balance >= totalWithdrawal {
+		transferFromCard.Balance -= totalWithdrawal
+		return totalWithdrawal, true
+	}
+
+	if transferFromCard.Balance < totalWithdrawal {
+		return totalWithdrawal, false
+	}
+
+	transferFromCard.Balance -= totalWithdrawal
+	transferToCard.Balance += amount
+
+	return totalWithdrawal, true
 }
 
 func (s *Service) calculateFee(fromCard, toCard *card.Card) *Fee {
